@@ -7,14 +7,14 @@ import (
 	"go.i3wm.org/i3"
 )
 
-// Connect verifies that we can talk to the i3 IPC socket
+// Connect verifies that we can talk to the i3 IPC socket.
 func Connect() {
-	_ = getTree()
+	_ = GetTree()
 }
 
-// PrintTree prints the current layout tree of the focused workspace in i3
+// PrintTree prints the current layout tree of the focused workspace in i3.
 func PrintTree() {
-	tree := getTree()
+	tree := GetTree()
 
 	out, err := json.MarshalIndent(tree, "", "  ")
 	if err != nil {
@@ -25,8 +25,8 @@ func PrintTree() {
 	fmt.Println(string(out))
 }
 
-// getTree retrieves the current layout tree from i3
-func getTree() i3.Tree {
+// GetTree retrieves the current layout tree from i3 and is exported for internal packages.
+func GetTree() i3.Tree {
 	tree, err := i3.GetTree()
 	if err != nil {
 		fmt.Printf("failed to get i3 tree: %v\n", err)
