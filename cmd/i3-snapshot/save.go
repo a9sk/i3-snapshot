@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+
+	"github.com/a9sk/i3-snapshot/internal/snapshot"
 	"github.com/spf13/cobra"
 )
 
@@ -13,7 +15,9 @@ var saveCmd = &cobra.Command{
 		snapshotName := args[0]
 		fmt.Printf("saving snapshot: %s\n", snapshotName)
 
-		// TODO: call internal/snapshot.Save(snapshotName) here
+		if err := snapshot.Save(snapshotName); err != nil {
+			fmt.Printf("error saving snapshot: %v\n", err)
+		}
 	},
 }
 

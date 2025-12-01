@@ -10,7 +10,7 @@ import (
 
 var pidCmd = &cobra.Command{
 	Use:   "pid [pid]",
-	Short: "Show the command used to start a given PID (debug helper for Phase 2)",
+	Short: "Show the command used to start a given PID",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		pid, err := strconv.Atoi(args[0])
