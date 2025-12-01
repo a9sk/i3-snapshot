@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/a9sk/i3-snapshot/internal/i3"
 	"github.com/spf13/cobra"
 )
 
-// rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "i3-snapshot",
 	Short: "A layout and session manager for i3wm",
@@ -19,10 +19,10 @@ var rootCmd = &cobra.Command{
 (including window layouts and running commands) and restore them later.`,
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	i3.Connect()
 }
