@@ -47,33 +47,39 @@ func Restore(name string) error {
 
 		time.Sleep(200 * time.Millisecond)
 
-		// extract workspace children for append_layout
-		var layoutRoot *models.LayoutNode
-		if ws.Root.Type == "workspace" {
-			if len(ws.Root.Nodes) == 0 && len(ws.Root.FloatingNodes) == 0 {
-				// empty workspace, skip layout but still launch windows for this workspace
-				launchCommands(ws.Windows)
-				continue
-			}
-
-			layoutRoot = &models.LayoutNode{
-				Type:          "con",
-				Layout:        ws.Root.Layout,
-				Nodes:         ws.Root.Nodes,
-				FloatingNodes: ws.Root.FloatingNodes,
-				Rect:          ws.Root.Rect,
-			}
-		} else {
-			layoutRoot = &ws.Root
+		// find the live workspace node so we can set its layout directly
+		tree, err := getTree()
+		if err != nil {
+			return fmt.Errorf("getting tree after switching to workspace %s: %w", ws.Name, err)
+		}
+		currentWS := findWorkspaceNode(tree.Root, ws.Name)
+		if currentWS == nil {
+			return fmt.Errorf("workspace %s not found after switching", ws.Name)
 		}
 
-		// apply layout to this workspace
-		if err := applyLayout(layoutRoot); err != nil {
-			return fmt.Errorf("applying layout to workspace %s: %w", ws.Name, err)
+		// restore the workspace's original layout direction
+		if isWorkspaceLayout(ws.Root.Layout) {
+			layoutCmd := fmt.Sprintf("[con_id=\"%d\"] layout %s", currentWS.ID, ws.Root.Layout)
+			if _, err := i3.RunCommand(layoutCmd); err != nil {
+				return fmt.Errorf("setting layout for workspace %s: %w", ws.Name, err)
+			}
+			time.Sleep(50 * time.Millisecond)
 		}
 
-		// wait a bit for layout placeholders to be created
-		time.Sleep(200 * time.Millisecond)
+		// apply placeholders for tiling and floating children at the workspace level
+		if len(ws.Root.Nodes) > 0 || len(ws.Root.FloatingNodes) > 0 {
+			children := make([]models.I3LayoutNode, 0, len(ws.Root.Nodes)+len(ws.Root.FloatingNodes))
+			for i := range ws.Root.Nodes {
+				children = append(children, convertToI3Layout(&ws.Root.Nodes[i]))
+			}
+			for i := range ws.Root.FloatingNodes {
+				children = append(children, convertToI3Layout(&ws.Root.FloatingNodes[i]))
+			}
+			if err := applyLayout(children); err != nil {
+				return fmt.Errorf("applying layout to workspace %s: %w", ws.Name, err)
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
 
 		// launch commands for THIS workspace while we're still on it
 		// this ensures windows open in the correct workspace
@@ -112,11 +118,14 @@ func loadSnapshot(name string) (models.Snapshot, error) {
 	return snap, nil
 }
 
-// applyLayout converts our LayoutNode to i3's expected format and applies it.
-func applyLayout(root *models.LayoutNode) error {
-	i3Root := convertToI3Layout(root)
+// applyLayout writes the given i3 layout nodes as a JSON array to a temp file
+// and applies it to the current workspace via append_layout.
+func applyLayout(children []models.I3LayoutNode) error {
+	if len(children) == 0 {
+		return nil
+	}
 
-	data, err := json.Marshal(i3Root)
+	data, err := json.Marshal(children)
 	if err != nil {
 		return fmt.Errorf("marshalling layout: %w", err)
 	}
@@ -134,13 +143,41 @@ func applyLayout(root *models.LayoutNode) error {
 	}
 	tmp.Close()
 
-	reply, err := i3.RunCommand(fmt.Sprintf("append_layout %s", tmp.Name()))
-	if err != nil {
+	if _, err := i3.RunCommand(fmt.Sprintf("append_layout %s", tmp.Name())); err != nil {
 		return fmt.Errorf("running append_layout: %w", err)
 	}
-	_ = reply // TODO: in future we might inspect success/failure per command
-
 	return nil
+}
+
+// findWorkspaceNode returns the workspace node with the given name.
+func findWorkspaceNode(root *i3.Node, name string) *i3.Node {
+	if root == nil {
+		return nil
+	}
+	if root.Type == i3.WorkspaceNode && root.Name == name {
+		return root
+	}
+	for i := range root.Nodes {
+		if n := findWorkspaceNode(root.Nodes[i], name); n != nil {
+			return n
+		}
+	}
+	for i := range root.FloatingNodes {
+		if n := findWorkspaceNode(root.FloatingNodes[i], name); n != nil {
+			return n
+		}
+	}
+	return nil
+}
+
+// isWorkspaceLayout reports whether layout is a value that can be applied to a
+// workspace container.
+func isWorkspaceLayout(layout string) bool {
+	switch layout {
+	case "splith", "splitv", "tabbed", "stacking", "default":
+		return true
+	}
+	return false
 }
 
 // convertToI3Layout converts our LayoutNode to i3's expected format with swallows.
