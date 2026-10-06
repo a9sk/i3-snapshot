@@ -23,6 +23,7 @@ type LayoutNode struct {
 	Name          string       `json:"name,omitempty"`      // workspace name, window title, etc.
 	Border        string       `json:"border,omitempty"`    // for completeness
 	Rect          Rect         `json:"rect"`                // container rectangle
+	Percent       float64      `json:"percent,omitempty"`   // tiling split proportion
 	WindowID      int          `json:"window_id,omitempty"` // X11 window ID, if any
 	WindowClass   string       `json:"window_class,omitempty"`
 	WindowInst    string       `json:"window_instance,omitempty"`
@@ -60,6 +61,7 @@ type I3LayoutNode struct {
 	Name          string            `json:"name,omitempty"`
 	Border        string            `json:"border,omitempty"`
 	Rect          Rect              `json:"rect"`
+	Percent       float64           `json:"percent,omitempty"`
 	Swallows      []SwallowCriteria `json:"swallows,omitempty"`
 	Nodes         []I3LayoutNode    `json:"nodes,omitempty"`
 	FloatingNodes []I3LayoutNode    `json:"floating_nodes,omitempty"`

@@ -149,8 +149,9 @@ func convertToI3Layout(n *models.LayoutNode) models.I3LayoutNode {
 	node := models.I3LayoutNode{
 		Type:   n.Type,
 		Layout: n.Layout,
-		Border: n.Border,
-		Rect:   n.Rect,
+		Border:  n.Border,
+		Rect:    n.Rect,
+		Percent: n.Percent,
 	}
 
 	// only include ID and Name for non-workspace containers to avoid creating workspaces

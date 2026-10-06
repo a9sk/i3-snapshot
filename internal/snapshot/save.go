@@ -114,6 +114,7 @@ func convertNode(n *i3.Node) (models.LayoutNode, []models.WindowRef) {
 		Name:     n.Name,
 		Border:   string(n.Border),
 		Rect:     models.Rect{X: int(n.Rect.X), Y: int(n.Rect.Y), Width: int(n.Rect.Width), Height: int(n.Rect.Height)},
+		Percent:  n.Percent,
 		WindowID: int(n.Window),
 		Focused:  n.Focused,
 	}
