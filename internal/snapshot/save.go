@@ -33,7 +33,17 @@ func Save(name string) error {
 		return fmt.Errorf("no workspaces found in i3 tree")
 	}
 
-	snap := buildSnapshot(name, workspaces)
+	// open a single X11 connection for resolving window PIDs; if X11 is not
+	// available, PID resolution is skipped but the snapshot remains usable.
+	var resolvePID func(uint32) (int, error)
+	if resolver, err := proc.NewX11Resolver(); err == nil {
+		defer resolver.Close()
+		resolvePID = resolver.PID
+	} else {
+		resolvePID = func(uint32) (int, error) { return 0, err }
+	}
+
+	snap := buildSnapshot(name, workspaces, resolvePID)
 
 	// resolve output path: ~/.config/i3-snapshot/saves/<name>.json
 	saveDir, err := savesDir()
@@ -87,14 +97,13 @@ func getAllWorkspaces(root *i3.Node) []*i3.Node {
 }
 
 // buildSnapshot converts multiple i3 workspace nodes + /proc data into the Snapshot model.
-func buildSnapshot(name string, workspaces []*i3.Node) models.Snapshot {
+func buildSnapshot(name string, workspaces []*i3.Node, resolvePID func(uint32) (int, error)) models.Snapshot {
 	snap := models.Snapshot{
 		Name: name,
 	}
 
 	for _, ws := range workspaces {
-		var windows []models.WindowRef
-		root, windows := convertNode(ws)
+		root, windows := convertNode(ws, resolvePID)
 		snap.Workspaces = append(snap.Workspaces, models.WorkspaceSnapshot{
 			Name:    ws.Name,
 			Root:    root,
@@ -106,7 +115,7 @@ func buildSnapshot(name string, workspaces []*i3.Node) models.Snapshot {
 }
 
 // convertNode walks an i3.Node tree and returns the LayoutNode plus a flat list of WindowRefs.
-func convertNode(n *i3.Node) (models.LayoutNode, []models.WindowRef) {
+func convertNode(n *i3.Node, resolvePID func(uint32) (int, error)) (models.LayoutNode, []models.WindowRef) {
 	node := models.LayoutNode{
 		ID:       int64(n.ID),
 		Type:     string(n.Type),
@@ -140,7 +149,7 @@ func convertNode(n *i3.Node) (models.LayoutNode, []models.WindowRef) {
 			// errors are treated as "no PID available" so snapshots remain usable
 			cmd := ""
 			cwd := ""
-			if pid, err := proc.GetPIDFromWindowID(uint32(n.Window)); err == nil && pid > 0 {
+			if pid, err := resolvePID(uint32(n.Window)); err == nil && pid > 0 {
 				if c, e := proc.GetCommandFromPID(pid); e == nil {
 					cmd = c
 				}
@@ -163,12 +172,12 @@ func convertNode(n *i3.Node) (models.LayoutNode, []models.WindowRef) {
 
 	// recurse into tiling and floating children
 	for i := range n.Nodes {
-		childNode, childWindows := convertNode(n.Nodes[i])
+		childNode, childWindows := convertNode(n.Nodes[i], resolvePID)
 		node.Nodes = append(node.Nodes, childNode)
 		allWindows = append(allWindows, childWindows...)
 	}
 	for i := range n.FloatingNodes {
-		childNode, childWindows := convertNode(n.FloatingNodes[i])
+		childNode, childWindows := convertNode(n.FloatingNodes[i], resolvePID)
 		node.FloatingNodes = append(node.FloatingNodes, childNode)
 		allWindows = append(allWindows, childWindows...)
 	}

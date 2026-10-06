@@ -464,7 +464,7 @@ func removePlaceholders(workspaceName string, expectedWindows []models.WindowRef
 		placeholder := placeholders[i]
 		cmd := fmt.Sprintf("[con_id=\"%d\"] kill", placeholder.ID)
 		i3.RunCommand(cmd)
-		// small delay to let i3 process the kill
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
