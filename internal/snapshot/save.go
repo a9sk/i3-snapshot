@@ -15,6 +15,10 @@ import (
 
 // Save captures all workspace layouts and associated commands into a JSON file.
 func Save(name string) error {
+	if err := validateSnapshotName(name); err != nil {
+		return err
+	}
+
 	tree, err := i3internal.GetTree()
 	if err != nil {
 		return err
@@ -32,11 +36,10 @@ func Save(name string) error {
 	snap := buildSnapshot(name, workspaces)
 
 	// resolve output path: ~/.config/i3-snapshot/saves/<name>.json
-	configDir, err := os.UserConfigDir()
+	saveDir, err := savesDir()
 	if err != nil {
-		return fmt.Errorf("resolving config dir: %w", err)
+		return err
 	}
-	saveDir := filepath.Join(configDir, "i3-snapshot", "saves")
 	if err := os.MkdirAll(saveDir, 0o755); err != nil {
 		return fmt.Errorf("creating save dir %s: %w", saveDir, err)
 	}
@@ -170,4 +173,21 @@ func convertNode(n *i3.Node) (models.LayoutNode, []models.WindowRef) {
 	}
 
 	return node, allWindows
+}
+
+// validateSnapshotName rejects names that could escape the saves directory.
+func validateSnapshotName(name string) error {
+	if name == "" || name == "." || name == ".." || strings.ContainsRune(name, '/') {
+		return fmt.Errorf("invalid snapshot name %q", name)
+	}
+	return nil
+}
+
+// savesDir returns the directory where snapshots are stored.
+func savesDir() (string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("resolving config dir: %w", err)
+	}
+	return filepath.Join(configDir, "i3-snapshot", "saves"), nil
 }

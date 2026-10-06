@@ -89,11 +89,15 @@ func Restore(name string) error {
 
 // loadSnapshot loads a snapshot JSON by name from the config directory.
 func loadSnapshot(name string) (models.Snapshot, error) {
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		return models.Snapshot{}, fmt.Errorf("resolving config dir: %w", err)
+	if err := validateSnapshotName(name); err != nil {
+		return models.Snapshot{}, err
 	}
-	path := filepath.Join(configDir, "i3-snapshot", "saves", name+".json")
+
+	saveDir, err := savesDir()
+	if err != nil {
+		return models.Snapshot{}, err
+	}
+	path := filepath.Join(saveDir, name+".json")
 
 	f, err := os.Open(path)
 	if err != nil {
