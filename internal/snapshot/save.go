@@ -15,7 +15,10 @@ import (
 
 // Save captures all workspace layouts and associated commands into a JSON file.
 func Save(name string) error {
-	tree := i3internal.GetTree()
+	tree, err := i3internal.GetTree()
+	if err != nil {
+		return err
+	}
 	if tree.Root == nil {
 		return fmt.Errorf("i3 tree root is nil")
 	}
@@ -52,54 +55,6 @@ func Save(name string) error {
 	}
 
 	return nil
-}
-
-// getWorkspaceTree pulls the current i3 tree and returns the focused workspace node.
-// Returns an error if no focused workspace is found.
-// Note: The focused node is usually a window (leaf), not the workspace container.
-// We track the current workspace as we walk and return it when we find a focused node.
-func getWorkspaceTree() (*i3.Node, error) {
-	tree := i3internal.GetTree()
-
-	if tree.Root == nil {
-		return nil, fmt.Errorf("i3 tree root is nil")
-	}
-
-	var focusedWorkspace *i3.Node
-
-	var walk func(n *i3.Node, currentWS *i3.Node)
-	walk = func(n *i3.Node, currentWS *i3.Node) {
-		if n == nil || focusedWorkspace != nil {
-			return
-		}
-
-		if n.Type == i3.WorkspaceNode {
-			currentWS = n
-		}
-
-		// check if THIS node is the one with focus
-		if n.Focused {
-			// f the workspace itself is focused (empty), currentWS is n
-			// if a winow inside is focused, currentWS is the parent workspace
-			focusedWorkspace = currentWS
-			return
-		}
-
-		// recurse into children, passing down the current workspace
-		for i := range n.Nodes {
-			walk(n.Nodes[i], currentWS)
-		}
-		for i := range n.FloatingNodes {
-			walk(n.FloatingNodes[i], currentWS)
-		}
-	}
-
-	walk(tree.Root, nil)
-
-	if focusedWorkspace == nil {
-		return nil, fmt.Errorf("no focused workspace found in i3 tree")
-	}
-	return focusedWorkspace, nil
 }
 
 // getAllWorkspaces collects all workspace nodes from the i3 tree.

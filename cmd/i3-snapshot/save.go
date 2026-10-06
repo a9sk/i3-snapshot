@@ -11,13 +11,14 @@ var saveCmd = &cobra.Command{
 	Use:   "save [name]",
 	Short: "Save the current workspace layout",
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		snapshotName := args[0]
 		fmt.Printf("saving snapshot: %s\n", snapshotName)
 
 		if err := snapshot.Save(snapshotName); err != nil {
-			fmt.Printf("error saving snapshot: %v\n", err)
+			return fmt.Errorf("error saving snapshot: %w", err)
 		}
+		return nil
 	},
 }
 

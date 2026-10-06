@@ -11,13 +11,14 @@ var restoreCmd = &cobra.Command{
 	Use:   "restore [name]",
 	Short: "Restore a previously saved workspace layout",
 	Args:  cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 		fmt.Printf("restoring snapshot: %s\n", name)
 
 		if err := snapshot.Restore(name); err != nil {
-			fmt.Printf("error restoring snapshot: %v\n", err)
+			return fmt.Errorf("error restoring snapshot: %w", err)
 		}
+		return nil
 	},
 }
 

@@ -8,8 +8,8 @@ import (
 var treeCmd = &cobra.Command{
 	Use:   "tree",
 	Short: "Print the current i3 workspace tree",
-	Run: func(cmd *cobra.Command, args []string) {
-		i3.PrintTree()
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return i3.PrintTree()
 	},
 }
 

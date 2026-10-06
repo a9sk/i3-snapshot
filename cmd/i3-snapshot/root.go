@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/a9sk/i3-snapshot/internal/i3"
 	"github.com/spf13/cobra"
 )
 
@@ -17,6 +16,8 @@ var rootCmd = &cobra.Command{
 	},
 	Long: `i3-snapshot allows you to save the current state of your i3 workspace
 (including window layouts and running commands) and restore them later.`,
+	SilenceErrors: true,
+	SilenceUsage:  true,
 }
 
 func Execute() {
@@ -24,5 +25,4 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	i3.Connect()
 }
